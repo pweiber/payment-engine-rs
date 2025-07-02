@@ -1,0 +1,53 @@
+type,client,tx,amount
+# --- Phase 1: Initial deposits to test precision handling ---
+# Client 1: Whole number, should be padded in output
+deposit,1,1,200
+# Client 2: Simple decimal, should be padded
+deposit,2,2,50.5
+# Client 3: Input requires rounding down
+deposit,3,3,123.45671
+# Client 4: Input requires rounding up
+deposit,4,4,99.98769
+
+# --- Phase 2: Standard operations and functionality tests ---
+# Client 1 makes a valid withdrawal
+withdrawal,1,5,100.0
+# Client 5 is new
+deposit,5,6,500.0
+# Client 5 attempts a withdrawal with insufficient funds (should be ignored)
+withdrawal,5,7,600.0
+
+# --- Phase 3: A dispute/resolve cycle on a precise decimal value ---
+# We deposit a clean decimal to client 3
+deposit,3,8,10.0000
+# Now we dispute and resolve that specific transaction
+dispute,3,8,
+resolve,3,8,
+
+# --- Phase 4: A dispute/chargeback cycle locking an account ---
+# Client 4's initial deposit is disputed
+dispute,4,4,
+# The dispute results in a chargeback, locking the account
+chargeback,4,4,
+# This deposit should be ignored because client 4's account is locked
+deposit,4,9,100.0
+
+# --- Phase 5: Common invalid operations ---
+# Dispute a transaction that doesn't exist
+dispute,1,99,
+# Resolve a transaction that was never disputed
+resolve,1,1,
+# Attempt to use a duplicate transaction ID (tx=1 is already used)
+deposit,6,1,20.0
+
+# --- Phase 6: Edge Cases ---
+# Test Idempotency: Dispute the same transaction twice. The second should be ignored.
+# A new deposit for client 5
+deposit,5,10,77.0
+# First dispute: should succeed and hold funds
+dispute,5,10,
+# Second dispute: should be ignored, funds should not be held twice
+dispute,5,10,
+# Test Client Mismatch: A non-existent client tries to dispute a valid transaction
+# Client 99 (doesn't exist) disputes tx=2 (belongs to client 2). Should be ignored.
+dispute,99,2,
